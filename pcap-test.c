@@ -3,6 +3,18 @@
 #include <stdio.h>
 #include "header.h"
 
+int check_TCP(const u_char* packet);
+int check_IP(const u_char* packet);
+void print_ethernet(const u_char* packet);
+uint8_t print_IP(const u_char* packet);
+uint8_t print_TCP(const u_char* packet);
+void print_Data(const u_char* packet);
+
+int global_ip_length;
+int global_tcp_length;
+int global_total_length;
+
+
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
 	printf("sample: pcap-test wlan0\n");
@@ -47,31 +59,113 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 		//printf("%u bytes captured\n", header->caplen);
+
+		int flag = 0;
+		flag = check_IP(packet);
+		if (flag == 1) continue;
+
+
+		flag = check_TCP(packet + 14);
+		if (flag == 1) continue;
+
 		print_ethernet(packet);
 		uint8_t tcp_offset = print_IP(packet + 14);
-		//printf("계산 전 %d\n",tcp_offset );
 		tcp_offset *= 4;
 		tcp_offset += 14;
-		//printf("계산 후 %d",tcp_offset );
-
 		uint8_t data_offset = print_TCP(packet + tcp_offset);
-		//printf("%d\n", data_offset);
-		
 		data_offset *= 4;
-		//printf("%d\n", data_offset);
-		
 		data_offset += tcp_offset;
-		//printf("%d\n", data_offset);
 		const char* data;
 		data = packet + data_offset;
 		print_Data(data);
-		//printf("%.8s \n", data);
-
-
-		//printf("\n");
-
-
 	}
 
 	pcap_close(pcap);
+}
+
+
+int check_IP(const u_char* packet)
+{
+    struct ethernet_hdr* eh;
+    eh = (struct ethernet_hdr *)packet;
+    if((ntohs(eh->ether_type)) != 0x0800)
+	{
+		printf("IP가 아님\n\n");
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+
+
+int check_TCP(const u_char* packet)
+{
+    struct IPv4_hdr* ip2;
+    ip2 = (struct IPv4_hdr *)packet;
+     
+    if((ip2->Protocol) != 0x06)
+    {
+		printf("TCP가 아님\n\n");
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+
+void print_ethernet(const u_char* packet)
+{
+    struct ethernet_hdr* eh;
+    eh = (struct ethernet_hdr *)packet;
+    printf("Ethernet Destination %x: %x: %x: %x: %x: %x \n",eh->ether_dst_mac[0],eh -> ether_dst_mac[1],eh -> ether_dst_mac[2],eh -> ether_dst_mac[3],eh -> ether_dst_mac[4],eh -> ether_dst_mac[5]);
+    printf("Ethernet Source  %x: %x: %x: %x: %x: %x \n",eh->ether_src_mac[0],eh -> ether_src_mac[1],eh -> ether_src_mac[2],eh -> ether_src_mac[3],eh -> ether_src_mac[4],eh -> ether_src_mac[5]);
+
+}
+
+uint8_t print_IP(const u_char* packet)
+{
+    struct IPv4_hdr* ip;
+    ip = (struct IPv4_hdr *)packet;
+    printf("IP Source  %d.%d.%d.%d \n",ip->IP_src_mac[0],ip -> IP_src_mac[1],ip -> IP_src_mac[2],ip -> IP_src_mac[3]);
+    printf("IP Destination  %d.%d.%d.%d \n",ip->IP_dst_mac[0],ip -> IP_dst_mac[1],ip -> IP_dst_mac[2],ip -> IP_dst_mac[3]);
+    //printf("ihl %d", ip->IHL);
+    global_ip_length = (ip->version)*4;
+    global_total_length = ntohs(ip->Ip_total_length);
+    return(ip->version); //iplength 출력
+}
+
+uint8_t print_TCP(const u_char* packet)
+{
+    struct TCP_hdr* tcp;
+    tcp = (struct TCP_hdr *)packet;
+    printf("TCP Source port: %d \n", ntohs(tcp->tcp_sport));
+    printf("TCP Destination port: %d \n", ntohs(tcp->tcp_dport));
+    //printf("아 짜증나 %x  %d \n", tcp->data_offset, tcp->data_offset);
+    global_tcp_length = (tcp->data_offset)*4;
+    return tcp->data_offset;
+
+}
+
+void print_Data(const u_char* packet)
+{
+    //printf("전역변수들 출력: ip: %d tcp:%d total:%d \n\n", global_ip_length, global_tcp_length, global_total_length);
+    if(global_total_length > (global_ip_length + global_tcp_length) )
+    {
+        struct Data* dt;
+        dt = (struct Data *)packet;
+        printf("%x %x %x %x %x %x %x %x\n\n", dt->data[0], dt->data[1], dt->data[2], dt->data[3], dt->data[4], dt->data[5], dt->data[6], dt->data[7] );
+    }
+    
+	else
+    {
+        printf("Data의 크기가 0\n\n");
+        return;
+    }
+
 }
