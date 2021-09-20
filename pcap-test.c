@@ -65,8 +65,10 @@ int main(int argc, char* argv[]) {
 		const char* data;
 		data = packet + data_offset;
 		print_Data(data);
-		printf("%.8s \n", data);
-		printf("\n");
+		//printf("%.8s \n", data);
+
+
+		//printf("\n");
 
 
 	}
