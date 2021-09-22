@@ -58,13 +58,10 @@ int main(int argc, char* argv[]) {
 			
 			break;
 		}
-		//printf("%u bytes captured\n", header->caplen);
 
 		int flag = 0;
 		flag = check_IP(packet);
 		if (flag == 1) continue;
-
-
 		flag = check_TCP(packet + 14);
 		if (flag == 1) continue;
 
@@ -134,7 +131,6 @@ uint8_t print_IP(const u_char* packet)
     ip = (struct IPv4_hdr *)packet;
     printf("IP Source  %d.%d.%d.%d \n",ip->IP_src_mac[0],ip -> IP_src_mac[1],ip -> IP_src_mac[2],ip -> IP_src_mac[3]);
     printf("IP Destination  %d.%d.%d.%d \n",ip->IP_dst_mac[0],ip -> IP_dst_mac[1],ip -> IP_dst_mac[2],ip -> IP_dst_mac[3]);
-    //printf("ihl %d", ip->IHL);
     global_ip_length = (ip->version)*4;
     global_total_length = ntohs(ip->Ip_total_length);
     return(ip->version); //iplength 출력
@@ -146,7 +142,6 @@ uint8_t print_TCP(const u_char* packet)
     tcp = (struct TCP_hdr *)packet;
     printf("TCP Source port: %d \n", ntohs(tcp->tcp_sport));
     printf("TCP Destination port: %d \n", ntohs(tcp->tcp_dport));
-    //printf("아 짜증나 %x  %d \n", tcp->data_offset, tcp->data_offset);
     global_tcp_length = (tcp->data_offset)*4;
     return tcp->data_offset;
 
@@ -154,7 +149,7 @@ uint8_t print_TCP(const u_char* packet)
 
 void print_Data(const u_char* packet)
 {
-    //printf("전역변수들 출력: ip: %d tcp:%d total:%d \n\n", global_ip_length, global_tcp_length, global_total_length);
+	// 길이 정보들을 토대로 데이터 유무 판단
     if(global_total_length > (global_ip_length + global_tcp_length) )
     {
         struct Data* dt;
